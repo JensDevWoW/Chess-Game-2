@@ -20,7 +20,6 @@ class Main:
         dragger = game.dragger
 
         while True:
-            pygame.time.delay(50)
             game.show_bg(screen)
             game.show_pieces(screen)
             if dragger.dragging:

@@ -23,6 +23,7 @@ class Main:
 
         while True:
             game.show_bg(screen)
+            game.show_last_move(screen)
             game.show_moves(screen)
             game.show_pieces(screen)
             if dragger.dragging:
@@ -51,6 +52,7 @@ class Main:
                     if dragger.dragging:
                         dragger.update_mouse(event.pos)
                         game.show_bg(screen)
+                        game.show_last_move(screen)
                         game.show_moves(screen)
                         game.show_pieces(screen)
                         dragger.update_blit(screen)
@@ -72,11 +74,12 @@ class Main:
 
                             # draw
                             game.show_bg(screen)
+                            game.show_last_move(screen)
                             game.show_pieces(screen)
                             
                             # next turn
                             game.next_turn()
-                            
+
                     dragger.undrag_piece()
 
                 elif event.type == pygame.QUIT:

@@ -16,19 +16,40 @@ class Board:
         Calculate all possible (valid) moves for a specific piece
         '''
 
-        def knight_moves():
-            # 8 possible moves
-            possible_moves = [
-                (row - 2, col + 1),
-                (row - 1, col + 2),
-                (row + 1, col + 2),
-                (row + 2, col + 1),
-                (row + 2, col - 1),
-                (row + 1, col - 2),
-                (row - 1, col - 2),
-                (row - 2, col - 1)
+        def pawn_moves():
+            possible_moves = []
+            first_move = False
+            major3 = [[row + 1, col + i] for i in range(-1, 2)] if piece.dir > 0 else [[row - 1, col + i] for i in range(-1, 2)]
+            if (piece.dir < 0 and row == 6) or (piece.dir > 0 and row == 1):
+                first_move = True
 
-            ]
+            if self.squares[row + piece.dir][col].isempty():
+                possible_moves.append((row + piece.dir, col))
+                if self.squares[row + (2 * piece.dir)][col].isempty():
+                    possible_moves.append((row + (piece.dir * 2), col))
+
+            for move in major3:
+                if Square.in_range(move[0], move[1]):
+                    if major3.index(move) % 2 == 0:
+                        if self.squares[move[0]][move[1]].has_rival_piece(piece.color):
+                            possible_moves.append((move[0], move[1]))
+
+            for move in possible_moves:
+                initial = Square(row, col)
+                final = Square(move[0], move[1])
+
+                move = Move(initial, final)
+                piece.add_move(move)
+                        
+
+            
+
+        def knight_moves():
+            possible_moves = []
+            for i in range(-2, 3):
+                for j in range(-2, 3):
+                    if i ** 2 + j ** 2 == 5:
+                        possible_moves.append((row + i, col + j))
 
             for move in possible_moves:
                 move_row, move_col = move
@@ -41,19 +62,83 @@ class Board:
                         move = Move(initial, final)
                         piece.add_move(move)
 
+        def king_moves():
+            # 9 possible moves
+            possible_moves = []
+            for y in range(3):
+                for x in range(3):
+                    possible_moves.append((row - 1 + y, col - 1 + x))
+
+            for move in possible_moves:
+                move_row, move_col = move
+
+                if Square.in_range(move_row, move_col):
+                    if self.squares[move_row][move_col].isempty_or_rival(piece.color):
+                        initial = Square(row, col)
+                        final = Square(move_row, move_col)
+
+                        move = Move(initial, final)
+                        piece.add_move(move)
+        def bishop_moves():
+            possible_moves = [[[row + i, col + i] for i in range(1, 8)],
+                         [[row + i, col - i] for i in range(1, 8)],
+                         [[row - i, col + i] for i in range(1, 8)],
+                         [[row - i, col - i] for i in range(1, 8)]]
+            for direction in possible_moves:
+                for move in direction:
+                    if Square.in_range(move[0], move[1]):
+                        if self.squares[move[0]][move[1]].isempty():
+                            initial = Square(row, col)
+                            final = Square(move[0], move[1])
+
+                            move = Move(initial, final)
+                            piece.add_move(move)
+                        else:
+                            if self.squares[move[0]][move[1]].has_rival_piece(piece.color):
+                                initial = Square(row, col)
+                                final = Square(move[0], move[1])
+                                
+                                move = Move(initial, final)
+                                piece.add_move(move)
+                            break
+        def rook_moves():
+            possible_moves = [[[row + i, col] for i in range(1, 8 - row)],
+                     [[row - i, col] for i in range(1, row + 1)],
+                     [[row, col + i] for i in range(1, 8 - col)],
+                     [[row, col - i] for i in range(1, col + 1)]]
+            for direction in possible_moves:
+                for move in direction:
+                    if Square.in_range(move[0], move[1]):
+                        if self.squares[move[0]][move[1]].isempty():
+                            initial = Square(row, col)
+                            final = Square(move[0], move[1])
+
+                            move = Move(initial, final)
+                            piece.add_move(move)
+                        else:
+                            if self.squares[move[0]][move[1]].has_rival_piece(piece.color):
+                                initial = Square(row, col)
+                                final = Square(move[0], move[1])
+                                
+                                move = Move(initial, final)
+                                piece.add_move(move)
+                            break
+        def queen_moves():
+            rook_moves()
+            bishop_moves() 
 
         if isinstance(piece, Pawn):
-            pass
+            pawn_moves()
         elif isinstance(piece, Knight):
             knight_moves()
         elif isinstance(piece, Bishop):
-            pass
+            bishop_moves()
         elif isinstance(piece, Rook):
-            pass
+            rook_moves()
         elif isinstance(piece, Queen):
-            pass
+            queen_moves()
         elif isinstance(piece, King):
-            pass
+            king_moves()
 
     def _create(self):
         for row in range(ROWS):
@@ -80,7 +165,7 @@ class Board:
         self.squares[row_other][7] = Square(row_other, 7, Rook(color))
 
         #Queen
-        self.squares[row_other][3] = Square(row_other, 3, Queen(color))
+        self.squares[5][3] = Square(row_other, 3, Queen(color))
 
         #King
         self.squares[row_other][4] = Square(row_other, 4, King(color))

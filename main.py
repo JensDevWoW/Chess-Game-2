@@ -26,9 +26,8 @@ class Main:
             game.show_last_move(screen)
             game.show_moves(screen)
             game.show_pieces(screen)
-
             game.show_hover(screen)
-            
+
             if dragger.dragging:
                 dragger.update_blit(screen)
                 
@@ -90,6 +89,11 @@ class Main:
                             game.next_turn()
 
                     dragger.undrag_piece()
+                # key press
+                elif event.type == pygame.KEYDOWN:
+                    #changing themes
+                    if event.key == pygame.K_t:
+                        game.change_theme()
 
                 elif event.type == pygame.QUIT:
                     pygame.quit()

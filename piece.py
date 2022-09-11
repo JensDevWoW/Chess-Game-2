@@ -16,7 +16,7 @@ class Piece:
         self.texture = os.path.join(
             f'Chess-Game-2/assets/images/imgs-{size}px/{self.color}_{self.name}.png')
 
-    def add_moves(self, move):
+    def add_move(self, move):
         self.moves.append(move)
 
 class Pawn(Piece):

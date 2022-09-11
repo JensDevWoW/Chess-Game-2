@@ -6,10 +6,30 @@ class Board:
     
     def __init__(self):
         self.squares = [[0,0,0,0,0,0,0,0] for col in range(COLS)]
-        
+        self.last_move = None
         self._create()
         self._add_pieces('white')
         self._add_pieces('black')
+
+    def move(self, piece, move):
+        initial = move.initial
+        final = move.final
+
+        # console board move update
+        self.squares[initial.row][initial.col].piece = None
+        self.squares[final.row][final.col].piece = piece
+
+        # move
+        piece.moved = True
+
+        # clear valid moves
+        piece.clear_moves()
+
+        # set last move
+        self.last_move = move
+
+    def valid_move(self, piece, move):
+        return move in piece.moves
 
     def calc_moves(self, piece, row, col):
         '''
@@ -18,14 +38,12 @@ class Board:
 
         def pawn_moves():
             possible_moves = []
-            first_move = False
+            first_move = True if piece.moved == False else False
             major3 = [[row + 1, col + i] for i in range(-1, 2)] if piece.dir > 0 else [[row - 1, col + i] for i in range(-1, 2)]
-            if (piece.dir < 0 and row == 6) or (piece.dir > 0 and row == 1):
-                first_move = True
 
             if self.squares[row + piece.dir][col].isempty():
                 possible_moves.append((row + piece.dir, col))
-                if self.squares[row + (2 * piece.dir)][col].isempty():
+                if self.squares[row + (2 * piece.dir)][col].isempty() and first_move == True:
                     possible_moves.append((row + (piece.dir * 2), col))
 
             for move in major3:
@@ -165,7 +183,7 @@ class Board:
         self.squares[row_other][7] = Square(row_other, 7, Rook(color))
 
         #Queen
-        self.squares[5][3] = Square(row_other, 3, Queen(color))
+        self.squares[row_other][3] = Square(row_other, 3, Queen(color))
 
         #King
         self.squares[row_other][4] = Square(row_other, 4, King(color))

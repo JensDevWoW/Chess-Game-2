@@ -5,6 +5,7 @@ from board import Board
 from dragger import Dragger
 from config import Config
 from square import Square
+from engine import *
 
 class Game:
 
@@ -14,6 +15,7 @@ class Game:
         self.board = Board()
         self.dragger = Dragger()
         self.config = Config()
+        self.Engine = Engine()
     # Show methods
 
     def show_bg(self, surface):
@@ -104,6 +106,9 @@ class Game:
 
     def next_turn(self):
         self.next_player = 'white' if self.next_player == 'black' else 'black'
+        if self.next_player == 'black':
+            self.Engine.gen_moves(self.board, self)
+            self.Engine.move(self.board, self)
     
     def set_hover(self, row, col):
         self.hovered_square = self.board.squares[row][col]

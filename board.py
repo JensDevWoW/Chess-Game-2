@@ -56,6 +56,14 @@ class Board:
 
         # set last move
         self.last_move = move
+    def clear_all_moves(self):
+        for row in range(ROWS):
+            for col in range(COLS):
+                if self.squares[row][col].has_piece():
+                    self.squares[row][col].piece.clear_moves()
+    def get_piece_from_move(self, move):
+        if self.squares[move.final.row][move.final.col].piece:
+            return self.squares[move.final.row][move.final.col].piece
 
     def valid_move(self, piece, move):
         return move in piece.moves
@@ -67,6 +75,14 @@ class Board:
     def castling(self, initial, final):
         return abs(initial.col - final.col) == 2
 
+    def find_piece_in_square(self, square):
+        if square.piece:
+            return self.piece
+    def will_take_enemy_piece(self, move, color):
+        if self.squares[move.final.row][move.final.col].has_enemy_piece(color):
+            return True
+        else:
+            return False
     def set_true_en_passant(self, piece):
         
         if not isinstance(piece, Pawn):
@@ -95,6 +111,15 @@ class Board:
         
         return False
 
+    # very important function
+    def calc_weight(self, piece, move):
+        if self.will_take_enemy_piece(move, piece.color):
+            taken_piece = self.get_piece_from_move(move)
+            return taken_piece.value
+        else:
+            return 0
+
+
     def calc_moves(self, piece, row, col, bool=True):
         '''
             Calculate all the possible (valid) moves of an specific piece on a specific position
@@ -121,9 +146,11 @@ class Board:
                             if not self.in_check(piece, move):
                                 # append new move
                                 piece.add_move(move)
+                                move.weight = self.calc_weight(piece, move)
                         else:
                             # append new move
                             piece.add_move(move)
+                            move.weight = self.calc_weight(piece, move)
                     # blocked
                     else: break
                 # not in range
@@ -147,9 +174,11 @@ class Board:
                             if not self.in_check(piece, move):
                                 # append new move
                                 piece.add_move(move)
+                                move.weight = self.calc_weight(piece, move)
                         else:
                             # append new move
                             piece.add_move(move)
+                            move.weight = self.calc_weight(piece, move)
 
             # en passant moves
             r = 3 if piece.color == 'white' else 4
@@ -171,9 +200,11 @@ class Board:
                                 if not self.in_check(piece, move):
                                     # append new move
                                     piece.add_move(move)
+                                    move.weight = self.calc_weight(piece, move)
                             else:
                                 # append new move
                                 piece.add_move(move)
+                                move.weight = self.calc_weight(piece, move)
             
             # right en pessant
             if Square.in_range(col+1) and row == r:
@@ -192,9 +223,11 @@ class Board:
                                 if not self.in_check(piece, move):
                                     # append new move
                                     piece.add_move(move)
+                                    move.weight = self.calc_weight(piece, move)
                             else:
                                 # append new move
                                 piece.add_move(move)
+                                move.weight = self.calc_weight(piece, move)
 
 
         def knight_moves():
@@ -227,10 +260,12 @@ class Board:
                             if not self.in_check(piece, move):
                                 # append new move
                                 piece.add_move(move)
+                                move.weight = self.calc_weight(piece, move)
                             else: break
                         else:
                             # append new move
                             piece.add_move(move)
+                            move.weight = self.calc_weight(piece, move)
 
         def straightline_moves(incrs):
             for incr in incrs:
@@ -254,9 +289,11 @@ class Board:
                                 if not self.in_check(piece, move):
                                     # append new move
                                     piece.add_move(move)
+                                    move.weight = self.calc_weight(piece, move)
                             else:
                                 # append new move
                                 piece.add_move(move)
+                                move.weight = self.calc_weight(piece, move)
 
                         # has enemy piece = add move + break
                         elif self.squares[possible_move_row][possible_move_col].has_enemy_piece(piece.color):
@@ -265,9 +302,11 @@ class Board:
                                 if not self.in_check(piece, move):
                                     # append new move
                                     piece.add_move(move)
+                                    move.weight = self.calc_weight(piece, move)
                             else:
                                 # append new move
                                 piece.add_move(move)
+                                move.weight = self.calc_weight(piece, move)
                             break
 
                         # has team piece = break
@@ -309,10 +348,12 @@ class Board:
                             if not self.in_check(piece, move):
                                 # append new move
                                 piece.add_move(move)
+                                move.weight = self.calc_weight(piece, move)
                             else: break
                         else:
                             # append new move
                             piece.add_move(move)
+                            move.weight = self.calc_weight(piece, move)
 
             # castling moves
             if not piece.moved:

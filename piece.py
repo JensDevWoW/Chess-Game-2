@@ -10,6 +10,7 @@ class Piece:
         self.moves = []
         self.moved = False
         self.texture = texture
+        self.square = None
         self.set_texture()
         self.texture_rect = texture_rect
 

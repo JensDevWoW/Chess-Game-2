@@ -3,6 +3,7 @@ class Move:
     def __init__(self, initial, final):
         self.initial = initial
         self.final = final
+        self.weight = 0
     
     def __str__(self):
         s = ''

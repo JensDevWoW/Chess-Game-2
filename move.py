@@ -3,7 +3,7 @@ class Move:
     def __init__(self, initial, final):
         self.initial = initial
         self.final = final
-        self.weight = 0
+        self.weight = 0 # For engine: Percentage chance of a move being made or being skipped
     
     def __str__(self):
         s = ''

@@ -11,9 +11,12 @@ class Board:
     def __init__(self):
         self.squares = [[0, 0, 0, 0, 0, 0, 0, 0] for col in range(COLS)]
         self.last_move = None
+        self.move_list = []
+        self.next_player = 'white'
         self._create()
         self._add_pieces('white')
         self._add_pieces('black')
+        self.eval = 0
 
     def move(self, piece, move, testing=False):
         initial = move.initial
@@ -54,8 +57,13 @@ class Board:
         # clear valid moves
         piece.clear_moves()
 
+        # update player turn
+        self.next_player = 'black' if self.next_player == 'white' else 'white'
+
         # set last move
         self.last_move = move
+        self.move_list.append(move)
+
     def clear_all_moves(self):
         for row in range(ROWS):
             for col in range(COLS):
@@ -64,7 +72,16 @@ class Board:
     def get_piece_from_move(self, move):
         if self.squares[move.final.row][move.final.col].piece:
             return self.squares[move.final.row][move.final.col].piece
-
+    def undo_move(self):
+        initial = self.last_move.initial
+        final = self.last_move.final
+        piece = self.squares[final.row][final.col].piece
+        taken_piece = final.piece
+        self.squares[initial.row][initial.col].piece = piece
+        self.squares[final.row][final.col].piece = taken_piece
+        self.last_move = self.move_list[len(self.move_list) - 1]
+        self.move_list.remove(self.last_move)
+        piece.moved = False
     def valid_move(self, piece, move):
         return move in piece.moves
 
@@ -94,6 +111,17 @@ class Board:
                     self.squares[row][col].piece.en_passant = False
         
         piece.en_passant = True
+    def getValidMoves(self, color):
+        move_list = []
+        for row in range(ROWS):
+            for col in range(COLS):
+                if self.squares[row][col].has_piece():
+                    piece = self.squares[row][col].piece
+                    if piece.color == color:
+                        self.calc_moves(piece, row, col)
+                        for move in piece.moves:
+                            move_list.append(move)
+        return move_list
 
     def in_check(self, piece, move):
         temp_piece = copy.deepcopy(piece)
@@ -111,7 +139,22 @@ class Board:
         
         return False
 
-    # very important function
+    # AI functions
+    def evaluate(self):
+        eval = 0
+        for row in range(ROWS):
+            for col in range(COLS):
+                if self.squares[row][col].has_piece():
+                    piece = self.squares[row][col].piece
+                    eval += piece.value
+        return round(eval, 1) if eval != -0.0 else 0
+    def undo_minimax_move(self, piece, move):
+        initial = move.initial
+        final = move.final
+        taken_piece = final.piece
+        self.squares[initial.row][initial.col].piece = piece
+        self.squares[final.row][final.col].piece = taken_piece
+        piece.moved = False
     def calc_weight(self, piece, move):
         if self.will_take_enemy_piece(move, piece.color):
             taken_piece = self.get_piece_from_move(move)
@@ -166,6 +209,7 @@ class Board:
                         initial = Square(row, col)
                         final_piece = self.squares[possible_move_row][possible_move_col].piece
                         final = Square(possible_move_row, possible_move_col, final_piece)
+                        final.piece = final_piece
                         # create a new move
                         move = Move(initial, final)
                         
@@ -252,6 +296,7 @@ class Board:
                         initial = Square(row, col)
                         final_piece = self.squares[possible_move_row][possible_move_col].piece
                         final = Square(possible_move_row, possible_move_col, final_piece)
+                        final.piece = final_piece
                         # create new move
                         move = Move(initial, final)
                         
@@ -279,6 +324,7 @@ class Board:
                         initial = Square(row, col)
                         final_piece = self.squares[possible_move_row][possible_move_col].piece
                         final = Square(possible_move_row, possible_move_col, final_piece)
+                        final.piece = final_piece
                         # create a possible new move
                         move = Move(initial, final)
 
@@ -341,6 +387,7 @@ class Board:
                         # create squares of the new move
                         initial = Square(row, col)
                         final = Square(possible_move_row, possible_move_col) # piece=piece
+                        final.piece = self.squares[possible_move_row][possible_move_col].piece
                         # create new move
                         move = Move(initial, final)
                         # check potencial checks
@@ -495,3 +542,4 @@ class Board:
 
         # king
         self.squares[row_other][4] = Square(row_other, 4, King(color))
+        

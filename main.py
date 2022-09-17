@@ -46,7 +46,7 @@ class Main:
                     if board.squares[clicked_row][clicked_col].has_piece():
                         piece = board.squares[clicked_row][clicked_col].piece
                         # valid piece (color) ?
-                        if piece.color == game.next_player:
+                        if piece.color == board.next_player:
                             board.calc_moves(piece, clicked_row, clicked_col, bool=True)
                             dragger.save_initial(event.pos)
                             dragger.drag_piece(piece)
@@ -101,8 +101,8 @@ class Main:
                             game.show_bg(screen)
                             game.show_last_move(screen)
                             game.show_pieces(screen)
-                            # next turn
-                            game.next_turn()
+                            # try running engine
+                            game.run_eng()
                     
                     dragger.undrag_piece()
                 
@@ -119,6 +119,10 @@ class Main:
                         game = self.game
                         board = self.game.board
                         dragger = self.game.dragger
+
+                    if event.key == pygame.K_z:
+                        self.game.board.undo_move()
+                        game.next_turn()
 
                 # quit application
                 elif event.type == pygame.QUIT:

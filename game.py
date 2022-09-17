@@ -10,12 +10,11 @@ from engine import *
 class Game:
 
     def __init__(self):
-        self.next_player = 'white'
         self.hovered_square = None
         self.board = Board()
         self.dragger = Dragger()
         self.config = Config()
-        self.Engine = Engine()
+        self.Engine = Engine(self.board, self)
     # Show methods
 
     def show_bg(self, surface):
@@ -104,11 +103,9 @@ class Game:
             pygame.draw.rect(surface, color, rect, width=3)
 
 
-    def next_turn(self):
-        self.next_player = 'white' if self.next_player == 'black' else 'black'
-        if self.next_player == 'black':
-            self.Engine.gen_moves(self.board, self)
-            self.Engine.move(self.board, self)
+    def run_eng(self):
+        if self.board.next_player == 'black':
+            self.Engine.move()
     
     def set_hover(self, row, col):
         self.hovered_square = self.board.squares[row][col]

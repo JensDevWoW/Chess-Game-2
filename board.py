@@ -182,7 +182,7 @@ class Board:
                         initial = Square(row, col)
                         final = Square(possible_move_row, col)
                         # create a new move
-                        move = Move(initial, final)
+                        move = Move(initial, final, piece)
 
                         # check potencial checks
                         if bool:
@@ -211,7 +211,7 @@ class Board:
                         final = Square(possible_move_row, possible_move_col, final_piece)
                         final.piece = final_piece
                         # create a new move
-                        move = Move(initial, final)
+                        move = Move(initial, final, piece)
                         
                         # check potencial checks
                         if bool:
@@ -237,7 +237,7 @@ class Board:
                             initial = Square(row, col)
                             final = Square(fr, col-1, p)
                             # create a new move
-                            move = Move(initial, final)
+                            move = Move(initial, final, piece)
                             
                             # check potencial checks
                             if bool:
@@ -260,7 +260,7 @@ class Board:
                             initial = Square(row, col)
                             final = Square(fr, col+1, p)
                             # create a new move
-                            move = Move(initial, final)
+                            move = Move(initial, final, piece)
                             
                             # check potencial checks
                             if bool:
@@ -298,7 +298,7 @@ class Board:
                         final = Square(possible_move_row, possible_move_col, final_piece)
                         final.piece = final_piece
                         # create new move
-                        move = Move(initial, final)
+                        move = Move(initial, final, piece)
                         
                         # check potencial checks
                         if bool:
@@ -326,7 +326,7 @@ class Board:
                         final = Square(possible_move_row, possible_move_col, final_piece)
                         final.piece = final_piece
                         # create a possible new move
-                        move = Move(initial, final)
+                        move = Move(initial, final, piece)
 
                         # empty = continue looping
                         if self.squares[possible_move_row][possible_move_col].isempty():
@@ -389,7 +389,7 @@ class Board:
                         final = Square(possible_move_row, possible_move_col) # piece=piece
                         final.piece = self.squares[possible_move_row][possible_move_col].piece
                         # create new move
-                        move = Move(initial, final)
+                        move = Move(initial, final, piece)
                         # check potencial checks
                         if bool:
                             if not self.in_check(piece, move):

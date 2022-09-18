@@ -38,12 +38,15 @@ class Engine:
     def select_move(self):
         tboard = copy.deepcopy(self.board)
         validMoves = self.board.getValidMoves('black')
-        return self.minimax_best(tboard, validMoves)
-    def minimax_best(self, tboard, validMoves):
+        random.shuffle(validMoves)
+        return self.find_best_move(tboard, validMoves)
+
+    def find_best_move(self, tboard, validMoves):
         global nextMove
         nextMove = None
-        self.minimax_scoring(tboard, validMoves, DEPTH, False)
+        self.negamax(tboard, validMoves, DEPTH, -1)
         return nextMove 
+
     def minimax_scoring(self, tboard, validMoves, depth, whiteToMove):
         global nextMove
         if depth == 0:
@@ -75,9 +78,45 @@ class Engine:
                         nextMove = move
                 tboard.undo_minimax_move(piece, move)
             return minScore
+    def negamax(self, tboard, validMoves, depth, turnMultiplier):
+        global nextMove
+        if depth == 0:
+            return turnMultiplier * tboard.evaluate()
+        maxScore = -1000
+        for move in validMoves:
+            piece = tboard.squares[move.initial.row][move.initial.col].piece
+            tboard.move(piece, move)
+            turn = 'black' if turnMultiplier < 0 else 'white'
+            nextMoves = tboard.getValidMoves(turn)
+            score = -self.negamax(tboard, nextMoves, depth-1, -turnMultiplier)
+            if score > maxScore:
+                maxScore = score
+                if depth == DEPTH:
+                    nextMove = move
+            tboard.undo_minimax_move(piece, move)
+        return maxScore
+                    
+    def negamax_ab(self, tboard, validMoves, depth, alpha, beta, turnMultiplier):
+        global nextMove
+        if depth == 0:
+            return turnMultiplier * tboard.evaluate()
 
-        
-                    
-                    
+        maxScore = -1000
+        for move in validMoves:
+            piece = tboard.squares[move.initial.row][move.initial.col].piece
+            tboard.move(piece, move)
+            turn = 'black' if turnMultiplier < 0 else 'white'
+            nextMoves = tboard.getValidMoves(turn)
+            score = -self.negamax_ab(tboard, nextMoves, depth-1, -beta, -alpha, -turnMultiplier)
+            if score > maxScore:
+                maxScore = score
+                if depth == DEPTH:
+                    nextMove = move
+            tboard.undo_minimax_move(piece, move)
+            if maxScore > alpha: # pruning
+                alpha = maxScore
+            if alpha >= beta:
+                break
+        return maxScore           
 
             

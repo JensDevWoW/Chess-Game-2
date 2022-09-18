@@ -111,13 +111,13 @@ class Board:
                     self.squares[row][col].piece.en_passant = False
         
         piece.en_passant = True
-    def getValidMoves(self, color):
+    def getValidMoves(self):
         move_list = []
         for row in range(ROWS):
             for col in range(COLS):
                 if self.squares[row][col].has_piece():
                     piece = self.squares[row][col].piece
-                    if piece.color == color:
+                    if piece.color == self.next_player:
                         self.calc_moves(piece, row, col)
                         for move in piece.moves:
                             move_list.append(move)
@@ -420,12 +420,12 @@ class Board:
                                 # rook move
                                 initial = Square(row, 0)
                                 final = Square(row, 3)
-                                moveR = Move(initial, final)
+                                moveR = Move(initial, final, piece)
 
                                 # king move
                                 initial = Square(row, col)
                                 final = Square(row, 2)
-                                moveK = Move(initial, final)
+                                moveK = Move(initial, final, piece)
 
                                 # check potencial checks
                                 if bool:
@@ -456,12 +456,12 @@ class Board:
                                 # rook move
                                 initial = Square(row, 7)
                                 final = Square(row, 5)
-                                moveR = Move(initial, final)
+                                moveR = Move(initial, final, piece)
 
                                 # king move
                                 initial = Square(row, col)
                                 final = Square(row, 6)
-                                moveK = Move(initial, final)
+                                moveK = Move(initial, final, piece)
 
                                 # check potencial checks
                                 if bool:

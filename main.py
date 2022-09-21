@@ -1,11 +1,12 @@
-import pygame
 import sys
-
+import pygame
 from const import *
 from game import Game
 from square import Square
 from move import Move
 from engine import *
+import chess
+
 
 class Main:
 
@@ -20,6 +21,7 @@ class Main:
         screen = self.screen
         game = self.game
         board = self.game.board
+        cboard = self.game.cboard
         dragger = self.game.dragger
 
         while True:
@@ -34,8 +36,7 @@ class Main:
                 dragger.update_blit(screen)
 
             for event in pygame.event.get():
-
-                # click
+              # click
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     dragger.update_mouse(event.pos)
 
@@ -44,10 +45,12 @@ class Main:
 
                     # if clicked square has a piece ?
                     if board.squares[clicked_row][clicked_col].has_piece():
+                        board_pos = SQUARE_NAMES[clicked_row, clicked_col]
+                        
                         piece = board.squares[clicked_row][clicked_col].piece
                         # valid piece (color) ?
                         if piece.color == board.next_player:
-                            board.calc_moves(piece, clicked_row, clicked_col, bool=True)
+                            #board.show_available_moves(piece, clicked_row, clicked_col, bool=True)
                             dragger.save_initial(event.pos)
                             dragger.drag_piece(piece)
                             # show methods 
@@ -92,9 +95,13 @@ class Main:
                             # normal capture
                             captured = board.squares[released_row][released_col].has_piece()
                             board.move(dragger.piece, move)
-
+                            start_pos = SQUARE_NAMES[clicked_row, clicked_col]
+                            end_pos = SQUARE_NAMES[released_row, released_col]
+                            cboard_move = chess.Move.from_uci(board_pos + end_pos)
+                            cboard.push(cboard_move)
+                            # update move list
+                            board.calc_moves(cboard)
                             board.set_true_en_passant(dragger.piece)                            
-
                             # sounds
                             game.play_sound(captured)
                             # show methods

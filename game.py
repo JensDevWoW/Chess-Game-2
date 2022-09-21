@@ -6,14 +6,17 @@ from dragger import Dragger
 from config import Config
 from square import Square
 from engine import *
+import chess
 
 class Game:
 
     def __init__(self):
         self.hovered_square = None
-        self.board = Board()
+        self.cboard = chess.Board()
+        self.board = Board(self.cboard)
         self.dragger = Dragger()
         self.config = Config()
+        self.evaluation = 0
         self.Engine = Engine(self.board, self)
     # Show methods
 

@@ -1,0 +1,14 @@
+[
+    {
+        "fen": "rnbqkb1r/pppppppp/8/3nP3/3P4/8/PPP2PPP/RNBQKBNR b KQkq",
+        "src": "eco_tsv",
+        "eco": "B03",
+        "moves": "1. e4 Nf6 2. e5 Nd5 3. d4",
+        "name": "Alekhine Defense",
+        "aliases": {
+            "eco_js": "Alekhine Defense, 2. e5 Nd5 3. d4",
+            "scid": "Alekhine: 3.d4"
+        },
+        "scid": "B03a"
+    }
+]

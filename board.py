@@ -5,6 +5,8 @@ from move import Move
 from sound import Sound
 import copy
 import os
+from zobrist import ZOBRIST_KEYS
+import random
 
 class Board:
 
@@ -17,52 +19,126 @@ class Board:
         self._add_pieces('white')
         self._add_pieces('black')
         self.eval = 0
+        self.current_hash = self.get_hash()  # Initialize the board's current hash
+
+    def get_hash(self):
+        """Generates a unique hash for the current board position using Zobrist hashing."""
+        board_hash = 0
+
+        # Iterate over each square and XOR the Zobrist keys for pieces on the board
+        for row in range(ROWS):
+            for col in range(COLS):
+                if self.squares[row][col].has_piece():
+                    piece = self.squares[row][col].piece
+                    color = piece.color
+                    piece_type = piece.name
+                    # XOR the hash with the Zobrist key for this piece on this square
+                    board_hash ^= ZOBRIST_KEYS[color][piece_type][row][col]
+
+        # Optionally include the player's turn in the hash
+        if self.next_player == 'white':
+            board_hash ^= random.getrandbits(64)  # Random value for the turn (white to move)
+
+        return board_hash
 
     def move(self, piece, move, testing=False):
         initial = move.initial
         final = move.final
 
+        # Capture the piece at the final square if it exists
+        move.captured_piece = self.squares[final.row][final.col].piece
+
         en_passant_empty = self.squares[final.row][final.col].isempty()
 
-        # console board move update
+        # Update the board state
         self.squares[initial.row][initial.col].piece = None
         self.squares[final.row][final.col].piece = piece
 
         if isinstance(piece, Pawn):
-            # en passant capture
+            # Handle en passant capture
             diff = final.col - initial.col
             if diff != 0 and en_passant_empty:
-                # console board move update
                 self.squares[initial.row][initial.col + diff].piece = None
                 self.squares[final.row][final.col].piece = piece
                 if not testing:
-                    sound = Sound(
-                        os.path.join('assets/sounds/capture.wav'))
+                    sound = Sound(os.path.join('assets/sounds/capture.wav'))
                     sound.play()
-            
-            # pawn promotion
             else:
                 self.check_promotion(piece, final)
 
-        # king castling
+        # Handle castling for King
         if isinstance(piece, King):
             if self.castling(initial, final) and not testing:
                 diff = final.col - initial.col
                 rook = piece.left_rook if (diff < 0) else piece.right_rook
                 self.move(rook, rook.moves[-1])
 
-        # move
+        # Mark piece as moved and clear valid moves
         piece.moved = True
-
-        # clear valid moves
         piece.clear_moves()
 
-        # update player turn
+        # Update turn
         self.next_player = 'black' if self.next_player == 'white' else 'white'
 
-        # set last move
+        # Update last move
         self.last_move = move
         self.move_list.append(move)
+
+
+    def is_rook_on_open_file(self, row, col):
+        """Check if a rook is on an open or semi-open file."""
+        open_file = True
+        semi_open_file = True
+
+        for r in range(ROWS):
+            if r != row:
+                if self.squares[r][col].has_piece():
+                    piece = self.squares[r][col].piece
+                    # If a piece of the same color is blocking, it's not an open file
+                    if piece.color == self.squares[row][col].piece.color:
+                        open_file = False
+                        semi_open_file = False
+                        break
+                    # If an opponent's pawn is blocking, it's only a semi-open file
+                    if isinstance(piece, Pawn):
+                        open_file = False
+
+        return open_file, semi_open_file
+
+
+    def is_king_in_check(self, color):
+        """Check if the king of the specified color is in check."""
+        king_position = None
+
+        # Find the king's position on the board
+        for row in range(ROWS):
+            for col in range(COLS):
+                if self.squares[row][col].has_piece():
+                    piece = self.squares[row][col].piece
+                    if isinstance(piece, King) and piece.color == color:
+                        king_position = (row, col)
+                        break
+            if king_position:
+                break
+
+        # If king is not found (should not happen in normal chess rules)
+        if not king_position:
+            return False
+
+        # Check if any opposing piece can move to the king's position
+        opponent_color = 'black' if color == 'white' else 'white'
+        for row in range(ROWS):
+            for col in range(COLS):
+                if self.squares[row][col].has_piece():
+                    piece = self.squares[row][col].piece
+                    if piece.color == opponent_color:
+                        self.calc_moves(piece, row, col, bool=False)
+                        for move in piece.moves:
+                            if move.final.row == king_position[0] and move.final.col == king_position[1]:
+                                return True
+
+        return False
+
 
     def clear_all_moves(self):
         for row in range(ROWS):
@@ -72,16 +148,28 @@ class Board:
     def get_piece_from_move(self, move):
         if self.squares[move.final.row][move.final.col].piece:
             return self.squares[move.final.row][move.final.col].piece
-    def undo_move(self):
-        initial = self.last_move.initial
-        final = self.last_move.final
-        piece = self.squares[final.row][final.col].piece
-        taken_piece = final.piece
+    def undo_move(self, piece, move):
+        """Undo the last move made on the board."""
+        initial = move.initial
+        final = move.final
+
+        # Restore the piece to its initial position
         self.squares[initial.row][initial.col].piece = piece
-        self.squares[final.row][final.col].piece = taken_piece
-        self.last_move = self.move_list[len(self.move_list) - 1]
-        self.move_list.remove(self.last_move)
+
+        # Restore any captured piece to its original square
+        self.squares[final.row][final.col].piece = move.captured_piece
+
+        # Reset the moved status of the piece
         piece.moved = False
+
+        # Update the player turn
+        self.next_player = 'black' if self.next_player == 'white' else 'white'
+
+        # Remove the last move from the move list
+        self.move_list.pop()
+
+        # Update the board's last move
+        self.last_move = self.move_list[-1] if self.move_list else None
     def valid_move(self, piece, move):
         return move in piece.moves
 
@@ -139,15 +227,302 @@ class Board:
         
         return False
 
-    # AI functions
     def evaluate(self):
+        """Evaluate the current board position with a comprehensive evaluation function."""
         eval = 0
+
+        # Factors to consider
+        piece_activity = 0
+        king_safety = 0
+        pawn_structure = 0
+
         for row in range(ROWS):
             for col in range(COLS):
                 if self.squares[row][col].has_piece():
                     piece = self.squares[row][col].piece
+                    # Strong emphasis on material value
                     eval += piece.value
+
+                    # Piece activity and position-specific bonuses
+                    piece_activity += self.positional_bonus(piece, row, col)
+
+                    # Consider king safety especially during mid and endgames
+                    if isinstance(piece, King):
+                        king_safety += self.evaluate_king_safety(piece, row, col)
+
+                    # Evaluate pawn structure for doubled, isolated, or backward pawns
+                    if isinstance(piece, Pawn):
+                        pawn_structure += self.evaluate_pawn_structure(piece, row, col)
+
+        # Combine factors into the final evaluation score
+        eval += piece_activity + king_safety + pawn_structure
+
         return round(eval, 1) if eval != -0.0 else 0
+
+    def positional_bonus(self, piece, row, col):
+        """Evaluate positional bonuses for pieces based on their position and activity."""
+        central_squares = [(3, 3), (3, 4), (4, 3), (4, 4)]
+        near_central_squares = [(2, 2), (2, 3), (2, 4), (2, 5), (3, 2), (3, 5), (4, 2), (4, 5), (5, 2), (5, 3), (5, 4), (5, 5)]
+        bonus = 0
+
+        # General bonuses for central control
+        if (row, col) in central_squares:
+            bonus += 2 if piece.color == 'white' else -2
+        elif (row, col) in near_central_squares:
+            bonus += 1 if piece.color == 'white' else -1
+
+        # Piece-specific bonuses
+        if isinstance(piece, Knight):
+            bonus += self.knight_position_bonus(row, col)
+        elif isinstance(piece, Bishop):
+            bonus += self.bishop_position_bonus(row, col)
+        elif isinstance(piece, Rook):
+            bonus += self.rook_position_bonus(row, col)
+        elif isinstance(piece, Queen):
+            bonus += self.queen_position_bonus(row, col)
+        elif isinstance(piece, Pawn):
+            bonus += self.pawn_position_bonus(row, col)
+        elif isinstance(piece, King):
+            bonus += self.king_position_bonus(row, col)
+
+        return bonus
+
+    def is_doubled_pawn(self, pawn, col):
+        """Check if the given pawn is doubled on its file."""
+        pawn_count = 0
+        for row in range(ROWS):
+            if self.squares[row][col].has_piece() and isinstance(self.squares[row][col].piece, Pawn):
+                if self.squares[row][col].piece.color == pawn.color:
+                    pawn_count += 1
+        return pawn_count > 1
+
+    def is_isolated_pawn(self, pawn, col):
+        """Check if the given pawn is isolated (no pawns on adjacent files)."""
+        left_file = col - 1
+        right_file = col + 1
+
+        isolated = True
+        if left_file >= 0:
+            for row in range(ROWS):
+                if self.squares[row][left_file].has_piece() and isinstance(self.squares[row][left_file].piece, Pawn):
+                    if self.squares[row][left_file].piece.color == pawn.color:
+                        isolated = False
+                        break
+
+        if right_file < COLS:
+            for row in range(ROWS):
+                if self.squares[row][right_file].has_piece() and isinstance(self.squares[row][right_file].piece, Pawn):
+                    if self.squares[row][right_file].piece.color == pawn.color:
+                        isolated = False
+                        break
+
+        return isolated
+
+
+    def is_square_threatened(self, row, col, opponent_color):
+        """
+        Check if the square at (row, col) is threatened by any piece of the opponent's color.
+        """
+        # Iterate over all squares and check moves of opponent pieces
+        for r in range(ROWS):
+            for c in range(COLS):
+                if self.squares[r][c].has_piece():
+                    piece = self.squares[r][c].piece
+                    if piece.color == opponent_color:
+                        self.calc_moves(piece, r, c, bool=False)  # Calculate possible moves without checks
+                        for move in piece.moves:
+                            # Check if any move targets the specified square
+                            if move.final.row == row and move.final.col == col:
+                                return True
+        return False
+
+
+    def is_backward_pawn(self, pawn, row, col):
+        """Check if the given pawn is backward (cannot advance safely and lacks support)."""
+        direction = -1 if pawn.color == 'white' else 1
+        behind_row = row + direction
+
+        if behind_row >= 0 and behind_row < ROWS:
+            if self.squares[behind_row][col].has_piece() and isinstance(self.squares[behind_row][col].piece, Pawn):
+                if self.squares[behind_row][col].piece.color != pawn.color and self.is_isolated_pawn(pawn, col):
+                    return True
+
+        return False
+
+
+    def evaluate_king_safety(self, king, row, col):
+        """Evaluate king safety based on position, pawn cover, and opponent threats."""
+        safety = 0
+        # Check for pawn cover and whether the king is castled
+        if self.is_king_castled(king, row, col):
+            safety += 3
+        # Penalties for exposed or poorly defended kings
+        if self.is_king_exposed(king, row, col):
+            safety -= 3
+        return safety
+
+    def evaluate_pawn_structure(self, pawn, row, col):
+        """Evaluate pawn structure, penalizing weaknesses such as doubled, isolated, or backward pawns."""
+        structure_score = 0
+        # Penalize doubled pawns
+        if self.is_doubled_pawn(pawn, col):
+            structure_score -= 1
+        # Penalize isolated pawns with no adjacent pawn support
+        if self.is_isolated_pawn(pawn, col):
+            structure_score -= 1.5
+        # Penalize backward pawns that cannot advance easily
+        if self.is_backward_pawn(pawn, row, col):
+            structure_score -= 1
+        return structure_score
+
+
+    def knight_position_bonus(self, row, col):
+        """Evaluate positional bonuses and penalties specific to knights."""
+        bonus = 0
+        # Encourage centralization of knights
+        if (col in [2, 3, 4, 5]) and (row in [2, 3, 4, 5]):
+            bonus += 2
+        # Penalize knights on the edge of the board
+        if col == 0 or col == 7 or row == 0 or row == 7:
+            bonus -= 2
+        return bonus
+
+    def bishop_position_bonus(self, row, col):
+        """Evaluate positional bonuses specific to bishops."""
+        bonus = 0
+        # Reward active bishops and those that are not blocked by their own pawns
+        if not self.is_bishop_blocked(row, col):
+            bonus += 1.5
+        # Diagonal control and mobility
+        if (col in [2, 5]) and (row in [2, 5]):
+            bonus += 1
+        return bonus
+
+    # Add this method inside your Board class
+
+    def is_king_castled(self, king, row, col):
+        """Check if the king is in a typical castling position."""
+        # Common castling squares for kings
+        castling_positions = [(7, 6), (7, 2), (0, 6), (0, 2)]
+        return (row, col) in castling_positions
+
+
+    def rook_position_bonus(self, row, col):
+        """Evaluate positional bonuses specific to rooks."""
+        bonus = 0
+        open_file, semi_open_file = self.is_rook_on_open_file(row, col)
+        # Rooks on open files are very valuable
+        if open_file:
+            bonus += 2
+        elif semi_open_file:
+            bonus += 1
+        # Penalty for rooks that haven't been activated (still on original squares)
+        if (row == 0 and col in [0, 7]) or (row == 7 and col in [0, 7]):
+            bonus -= 1
+        return bonus
+
+
+    def queen_position_bonus(self, row, col):
+        """Evaluate positional bonuses specific to queens."""
+        bonus = 0
+        # Encourage early queen activity but discourage early overexposure
+        if row in [3, 4] and col in [3, 4]:
+            bonus += 1.5
+        # Discourage queens from being trapped or overexposed early
+        if (row, col) in [(0, 3), (7, 3), (0, 4), (7, 4)]:
+            bonus -= 1
+        return bonus
+
+    def pawn_position_bonus(self, row, col):
+        """Evaluate positional bonuses specific to pawns."""
+        bonus = 0
+        # Reward pawns that control center squares
+        if (row, col) in [(3, 3), (3, 4), (4, 3), (4, 4)]:
+            bonus += 0.5
+        # Penalize doubled, isolated, or backward pawns handled separately
+        return bonus
+
+    def king_position_bonus(self, row, col):
+        """Evaluate positional bonuses specific to kings, emphasizing safety."""
+        bonus = 0
+        # Early game: King safety in castling position is critical
+        if (row, col) in [(7, 6), (7, 2), (0, 6), (0, 2)]:
+            bonus += 3
+        # Encourage castling and king safety in general
+        if (row, col) in [(0, 4), (7, 4)]:  # Discourage center position if not castled
+            bonus -= 2
+        return bonus
+
+    # Add this method inside your Board class
+
+    def is_king_exposed(self, king, row, col):
+        """Check if the king is exposed or lacks sufficient pawn cover."""
+        # Define directions to check surrounding squares for pawn cover
+        directions = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
+        safety = 0
+
+        # Check each surrounding square for protection by friendly pawns
+        for dr, dc in directions:
+            r, c = row + dr, col + dc
+            if 0 <= r < ROWS and 0 <= c < COLS:
+                square = self.squares[r][c]
+                if square.has_piece() and isinstance(square.piece, Pawn) and square.piece.color == king.color:
+                    safety += 1
+
+        # Consider the king exposed if it has fewer than 2 pawns protecting it
+        return safety < 2
+
+
+    def evaluate_king_safety(self, king, row, col):
+        """Evaluate king safety based on position, pawn cover, and opponent threats."""
+        safety = 0
+        # Check for pawn cover and whether the king is castled
+        if self.is_king_castled(king, row, col):
+            safety += 3
+        # Penalties for exposed or poorly defended kings
+        if self.is_king_exposed(king, row, col):
+            safety -= 3
+        return safety
+
+
+    def evaluate_pawn_structure(self, pawn, row, col):
+        """Evaluate pawn structure, penalizing weaknesses such as doubled, isolated, or backward pawns."""
+        structure_score = 0
+        # Penalize doubled pawns
+        if self.is_doubled_pawn(pawn, col):
+            structure_score -= 1
+        # Penalize isolated pawns with no adjacent pawn support
+        if self.is_isolated_pawn(pawn, col):
+            structure_score -= 1.5
+        # Penalize backward pawns that cannot advance easily
+        if self.is_backward_pawn(pawn, row, col):
+            structure_score -= 1
+        return structure_score
+
+    def is_bishop_blocked(self, row, col):
+        """Check if a bishop is blocked by its own pawns."""
+        piece = self.squares[row][col].piece
+        if isinstance(piece, Bishop):
+            # Check if pawns of the same color block the bishop's diagonal paths
+            # Simplified example: you may need a more complex implementation
+            return (row > 0 and self.squares[row - 1][col].has_piece() and isinstance(self.squares[row - 1][col].piece, Pawn)) or \
+                (row < ROWS - 1 and self.squares[row + 1][col].has_piece() and isinstance(self.squares[row + 1][col].piece, Pawn))
+        return False
+
+
+
+    def is_rook_active(self, rook, row, col):
+        """Check if a rook is on an open or semi-open file, making it active."""
+        # Check if the rook's column has no pawns or only opposing pawns
+        for r in range(ROWS):
+            if self.squares[r][col].has_piece() and isinstance(self.squares[r][col].piece, Pawn):
+                if self.squares[r][col].piece.color == rook.color:
+                    return False
+        return True
+
+
+
+    
     def undo_minimax_move(self, piece, move):
         initial = move.initial
         final = move.final
